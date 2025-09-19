@@ -19,6 +19,10 @@ from typing import Any, Dict
 from google.analytics import admin_v1beta, data_v1beta
 from google.api_core.gapic_v1.client_info import ClientInfo
 from importlib import metadata
+import base64
+import os
+import json
+from google.oauth2 import service_account
 import google.auth
 import proto
 
@@ -47,7 +51,19 @@ _READ_ONLY_ANALYTICS_SCOPE = (
 
 def _create_credentials() -> google.auth.credentials.Credentials:
     """Returns Application Default Credentials with read-only scope."""
-    (credentials, _) = google.auth.default(scopes=[_READ_ONLY_ANALYTICS_SCOPE])
+    creds_base64 = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_BASE64")
+    if creds_base64:
+        creds_json = base64.b64decode(creds_base64).decode("utf-8")
+        creds_info = json.loads(creds_json)
+        credentials = (
+            service_account.Credentials.from_service_account_info(
+                creds_info, scopes=[_READ_ONLY_ANALYTICS_SCOPE]
+            )
+        )
+    else:
+        (credentials, _) = google.auth.default(
+            scopes=[_READ_ONLY_ANALYTICS_SCOPE]
+        )
     return credentials
 
 

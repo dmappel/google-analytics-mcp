@@ -150,6 +150,42 @@ Credentials saved to file: [PATH_TO_CREDENTIALS_JSON]
     }
     ```
 
+## Running the HTTP Server
+
+The HTTP server provides an alternative way to run the MCP server. It exposes an SSE endpoint that can be used by any HTTP client.
+
+### Start the server
+
+To start the HTTP server, run the following command:
+
+```shell
+analytics-mcp-http
+```
+
+The server will start on `http://0.0.0.0:8000`.
+
+### Configure the server
+
+The HTTP server requires the following environment variables to be set:
+
+*   `MCP_BEARER_TOKEN`: The bearer token to use for authentication.
+*   `GOOGLE_APPLICATION_CREDENTIALS_BASE64`: A base64-encoded Google Cloud service account key.
+
+You can set these environment variables in a `.env` file in the same directory where you run the server.
+
+### Connect to the SSE endpoint
+
+The SSE endpoint is available at `http://0.0.0.0:8000/mcp`. To connect to the endpoint, you need to send a `POST` request with an `Authorization` header containing the bearer token.
+
+Here's an example using `curl`:
+
+```shell
+curl -X POST http://0.0.0.0:8000/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "what can the analytics-mcp server do?"}'
+```
+
 ## Try it out 🥼
 
 Launch Gemini Code Assist or Gemini CLI and type `/mcp`. You should see
