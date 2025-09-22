@@ -1,228 +1,155 @@
-# Google Analytics MCP Server (Experimental)
+# Google Analytics MCP Server - HTTP Streamable Wrapper
 
 [![PyPI version](https://img.shields.io/pypi/v/analytics-mcp.svg)](https://pypi.org/project/analytics-mcp/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![GitHub branch check runs](https://img.shields.io/github/check-runs/googleanalytics/google-analytics-mcp/main)](https://github.com/googleanalytics/google-analytics-mcp/actions?query=branch%3Amain++)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/analytics-mcp)](https://pypi.org/project/analytics-mcp/)
-[![GitHub stars](https://img.shields.io/github/stars/googleanalytics/google-analytics-mcp?style=social)](https://github.com/googleanalytics/google-analytics-mcp/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/googleanalytics/google-analytics-mcp?style=social)](https://github.com/googleanalytics/google-analytics-mcp/network/members)
-[![YouTube Video Views](https://img.shields.io/youtube/views/PT4wGPxWiRQ)](https://www.youtube.com/watch?v=PT4wGPxWiRQ)
 
-This repo contains the source code for running a local
-[MCP](https://modelcontextprotocol.io) server that interacts with APIs for
-[Google Analytics](https://support.google.com/analytics).
+**HTTP Streamable wrapper** for the [Google Analytics MCP Server](https://github.com/googleanalytics/google-analytics-mcp), providing web-compatible MCP access for clients like [n8n](https://n8n.io/) and Claude Desktop.
 
-Join the discussion and ask questions in the
-[🤖-analytics-mcp channel](https://discord.com/channels/971845904002871346/1398002598665257060)
-on Discord.
+## Key Features
+- 🌐 **HTTP Streamable Transport** (modern MCP protocol)
+- 🔌 **n8n Compatible** with optimized schemas
+- 🔑 **Base64 Service Account Auth** via environment variables
+- 📊 **Full Google Analytics API** access
 
-## Tools 🛠️
+## Quick Start
 
-The server uses the
-[Google Analytics Admin API](https://developers.google.com/analytics/devguides/config/admin/v1)
-and
-[Google Analytics Data API](https://developers.google.com/analytics/devguides/reporting/data/v1)
-to provide several
-[Tools](https://modelcontextprotocol.io/docs/concepts/tools) for use with LLMs.
-
-### Retrieve account and property information 🟠
-
-- `get_account_summaries`: Retrieves information about the user's Google
-  Analytics accounts and properties.
-- `get_property_details`: Returns details about a property.
-- `list_google_ads_links`: Returns a list of links to Google Ads accounts for
-  a property.
-
-### Run core reports 📙
-
-- `run_report`: Runs a Google Analytics report using the Data API.
-- `get_custom_dimensions_and_metrics`: Retrieves the custom dimensions and
-  metrics for a specific property.
-
-### Run realtime reports ⏳
-
-- `run_realtime_report`: Runs a Google Analytics realtime report using the
-  Data API.
-
-## Setup instructions 🔧
-
-✨ Watch the [Google Analytics MCP Setup
-Tutorial](https://youtu.be/nS8HLdwmVlY) on YouTube for a step-by-step
-walkthrough of these instructions.
-
-[![Watch the video](https://img.youtube.com/vi/nS8HLdwmVlY/mqdefault.jpg)](https://www.youtube.com/watch?v=nS8HLdwmVlY)
-
-Setup involves the following steps:
-
-1.  Configure Python.
-1.  Configure credentials for Google Analytics.
-1.  Configure Gemini.
-
-### Configure Python 🐍
-
-[Install pipx](https://pipx.pypa.io/stable/#install-pipx).
-
-### Enable APIs in your project ✅
-
-[Follow the instructions](https://support.google.com/googleapi/answer/6158841)
-to enable the following APIs in your Google Cloud project:
-
-* [Google Analytics Admin API](https://console.cloud.google.com/apis/library/analyticsadmin.googleapis.com)
-* [Google Analytics Data API](https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com)
-
-### Configure credentials 🔑
-
-Configure your [Application Default Credentials
-(ADC)](https://cloud.google.com/docs/authentication/provide-credentials-adc).
-Make sure the credentials are for a user with access to your Google Analytics
-accounts or properties.
-
-Credentials must include the Google Analytics read-only scope:
-
-```
-https://www.googleapis.com/auth/analytics.readonly
+### 1. Install
+```bash
+git clone https://github.com/googleanalytics/google-analytics-mcp.git
+cd google-analytics-mcp
+pip install -e .
 ```
 
-Check out
-[Manage OAuth Clients](https://support.google.com/cloud/answer/15549257)
-for how to create an OAuth client.
+### 2. Configure Authentication
 
-Here are some sample `gcloud` commands you might find useful:
+**🔑 IMPORTANT**: Uses base64-encoded service account keys, NOT file paths.
 
-- Set up ADC using user credentials and an OAuth desktop or web client after
-  downloading the client JSON to `YOUR_CLIENT_JSON_FILE`.
+```bash
+# 1. Create service account in Google Cloud Console
+# 2. Download JSON key file
+# 3. Base64 encode it:
+base64 -w 0 service-account-key.json
 
-  ```shell
-  gcloud auth application-default login \
-    --scopes https://www.googleapis.com/auth/analytics.readonly,https://www.googleapis.com/auth/cloud-platform \
-    --client-id-file=YOUR_CLIENT_JSON_FILE
-  ```
-
-- Set up ADC using service account impersonation.
-
-  ```shell
-  gcloud auth application-default login \
-    --impersonate-service-account=SERVICE_ACCOUNT_EMAIL \
-    --scopes=https://www.googleapis.com/auth/analytics.readonly,https://www.googleapis.com/auth/cloud-platform
-  ```
-
-When the `gcloud auth application-default` command completes, copy the
-`PATH_TO_CREDENTIALS_JSON` file location printed to the console in the
-following message. You'll need this for the next step!
-
-```
-Credentials saved to file: [PATH_TO_CREDENTIALS_JSON]
+# 4. Create .env file:
+echo "MCP_BEARER_TOKEN=your-secure-token" > .env
+echo "GOOGLE_APPLICATION_CREDENTIALS_BASE64=<paste-base64-output>" >> .env
 ```
 
-### Configure Gemini
+### 3. Enable Google Analytics APIs
+- [Google Analytics Admin API](https://console.cloud.google.com/apis/library/analyticsadmin.googleapis.com)
+- [Google Analytics Data API](https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com)
 
-1.  Install [Gemini
-    CLI](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/index.md)
-    or [Gemini Code
-    Assist](https://marketplace.visualstudio.com/items?itemName=Google.geminicodeassist).
-
-1.  Create or edit the file at `~/.gemini/settings.json`, adding your server
-    to the `mcpServers` list.
-
-    Replace `PATH_TO_CREDENTIALS_JSON` with the path you copied in the previous
-    step.
-
-    We also recommend that you add a `GOOGLE_CLOUD_PROJECT` attribute to the
-    `env` object. Replace `YOUR_PROJECT_ID` in the following example with the
-    [project ID](https://support.google.com/googleapi/answer/7014113) of your
-    Google Cloud project.
-
-    ```json
-    {
-      "mcpServers": {
-        "analytics-mcp": {
-          "command": "pipx",
-          "args": [
-            "run",
-            "analytics-mcp"
-          ],
-          "env": {
-            "GOOGLE_APPLICATION_CREDENTIALS": "PATH_TO_CREDENTIALS_JSON",
-            "GOOGLE_PROJECT_ID": "YOUR_PROJECT_ID"
-          }
-        }
-      }
-    }
-    ```
-
-## Running the HTTP Server
-
-The HTTP server provides an alternative way to run the MCP server. It exposes an SSE endpoint that can be used by any HTTP client.
-
-### Start the server
-
-To start the HTTP server, run the following command:
-
-```shell
-analytics-mcp-http
+### 4. Run Server
+```bash
+analytics-mcp
+# Server starts at http://127.0.0.1:8000
 ```
 
-The server will start on `http://0.0.0.0:8000`.
-
-### Configure the server
-
-The HTTP server requires the following environment variables to be set:
-
-*   `MCP_BEARER_TOKEN`: The bearer token to use for authentication.
-*   `GOOGLE_APPLICATION_CREDENTIALS_BASE64`: A base64-encoded Google Cloud service account key.
-
-You can set these environment variables in a `.env` file in the same directory where you run the server.
-
-### Connect to the SSE endpoint
-
-The SSE endpoint is available at `http://0.0.0.0:8000/mcp`. To connect to the endpoint, you need to send a `POST` request with an `Authorization` header containing the bearer token.
-
-Here's an example using `curl`:
-
-```shell
-curl -X POST http://0.0.0.0:8000/mcp \
-  -H "Authorization: Bearer YOUR_TOKEN" \
+### 5. Test
+```bash
+curl -X POST http://127.0.0.1:8000/mcp \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "what can the analytics-mcp server do?"}'
+  -H "Authorization: Bearer your-secure-token" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 ```
 
-## Try it out 🥼
+## Available Tools
 
-Launch Gemini Code Assist or Gemini CLI and type `/mcp`. You should see
-`analytics-mcp` listed in the results.
+### Account Management
+- `get_account_summaries` - List all GA accounts and properties
+- `get_property_details` - Get property details
+- `list_google_ads_links` - List Google Ads connections
 
-Here are some sample prompts to get you started:
+### Reporting
+- `run_report` - Execute custom GA reports
+- `get_custom_dimensions_and_metrics` - Get custom dimensions/metrics
+- `run_realtime_report` - Get real-time analytics data
 
-- Ask what the server can do:
+## n8n Integration
 
-  ```
-  what can the analytics-mcp server do?
-  ```
+**Configure MCP Node:**
+- Server URL: `http://127.0.0.1:8000`
+- Transport: `HTTP Streamable`
+- Authentication: `Bearer Token`
+- Token: Your `MCP_BEARER_TOKEN` value
 
-- Ask about a Google Analytics property
+**Example Queries:**
+- "What properties do we have in Google Analytics?"
+- "How many visitors did we have last month?"
+- "Show me real-time active users"
 
-  ```
-  Give me details about my Google Analytics property with 'xyz' in the name
-  ```
+## Configuration
 
-- Prompt for analysis:
+### Environment Variables (.env)
+```bash
+# Required
+MCP_BEARER_TOKEN=your-secure-token-here
+GOOGLE_APPLICATION_CREDENTIALS_BASE64=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 
-  ```
-  what are the most popular events in my Google Analytics property in the last 180 days?
-  ```
+# Optional
+HOST=127.0.0.1
+PORT=8000
+GOOGLE_CLOUD_PROJECT=your-project-id
+```
 
-- Ask about signed-in users:
+### Alternative: Development with ADC
+```bash
+# For local development only
+gcloud auth application-default login \
+  --scopes https://www.googleapis.com/auth/analytics.readonly
+```
 
-  ```
-  were most of my users in the last 6 months logged in?
-  ```
+## API Reference
 
-- Ask about property configuration:
+### Endpoints
+- `GET /health` - Health check
+- `POST /mcp` - MCP JSON-RPC 2.0 endpoint
 
-  ```
-  what are the custom dimensions and custom metrics in my property?
-  ```
+### Example Tool Call
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "run_report",
+    "arguments": {
+      "property_id": "properties/123456789",
+      "date_ranges": [{"start_date": "2025-01-01", "end_date": "2025-01-31"}],
+      "dimensions": ["country"],
+      "metrics": ["sessions"]
+    }
+  }
+}
+```
 
-## Contributing ✨
+## Troubleshooting
 
-Contributions welcome! See the [Contributing Guide](CONTRIBUTING.md).
+### Common Issues
+- **Authentication failed**: Check `MCP_BEARER_TOKEN` in `.env`
+- **Schema validation errors**: Ensure using latest version with simplified schemas
+- **GA API errors**: Verify APIs enabled and service account has GA access
+
+### Debug Mode
+```bash
+export LOGGING_LEVEL=DEBUG
+analytics-mcp
+```
+
+## Architecture
+
+```
+n8n/Claude ◄─── HTTP Streamable ───► FastAPI ◄─── FastMCP ───► Google Analytics APIs
+           (JSON-RPC 2.0)           (Port 8000)    (Tools)
+```
+
+Built with:
+- [FastMCP](https://github.com/jlowin/fastmcp) - MCP framework
+- [FastAPI](https://fastapi.tiangolo.com/) - HTTP server
+- [Google Analytics APIs](https://developers.google.com/analytics) - Data source
+
+## Links
+
+- **Original GA MCP**: [googleanalytics/google-analytics-mcp](https://github.com/googleanalytics/google-analytics-mcp)
+- **MCP Protocol**: [modelcontextprotocol.io](https://modelcontextprotocol.io)
+- **n8n Integration**: [n8n.io](https://n8n.io)

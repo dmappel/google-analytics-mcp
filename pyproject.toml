@@ -15,7 +15,7 @@ dependencies = [
     "httpx>=0.28.1",
     "fastapi",
     "python-dotenv",
-    "sse-starlette"
+    "uvicorn[standard]"
 ]
 keywords = [
     "google analytics",
@@ -49,6 +49,7 @@ issues = "https://github.com/googleanalytics/google-analytics-mcp/issues"
 
 [project.scripts]
 analytics-mcp = "analytics_mcp.server:run_server"
+analytics-mcp-http = "analytics_mcp.http_server:run_http_streamable_server"
 # The previous name of the script. Kept for backwards compatibility.
 google-analytics-mcp = "analytics_mcp.server:run_server"
 
