@@ -93,6 +93,7 @@ async def get_current_token(token: Optional[str] = Depends(oauth2_scheme)):
 
 
 @app.get("/")
+@app.head("/")
 async def root():
     """Root endpoint providing server information."""
     return JSONResponse({
@@ -100,6 +101,8 @@ async def root():
         "version": "0.1.1",
         "status": "running",
         "transport": "streamable-http",
+        "deployment": "render" if os.environ.get("RENDER") else "local",
+        "port": os.environ.get("PORT", "8000"),
         "endpoints": {
             "mcp": "/mcp",
             "health": "/health",
@@ -109,12 +112,24 @@ async def root():
 
 
 @app.get("/health")
+@app.head("/health")
 async def health_check():
     """Health check endpoint."""
     return JSONResponse({
         "status": "healthy",
         "server": "Google Analytics MCP Server",
         "version": "0.1.1"
+    })
+
+
+@app.get("/test")
+async def test_endpoint():
+    """Simple test endpoint to verify deployment."""
+    return JSONResponse({
+        "message": "Server is working correctly!",
+        "deployment": "render" if os.environ.get("RENDER") else "local",
+        "timestamp": str(int(__import__("time").time())),
+        "available_tools": len(await mcp.list_tools())
     })
 
 
@@ -172,9 +187,43 @@ def _clean_input_schema(schema: dict) -> dict:
     return simplify_types(cleaned)
 
 
+async def optional_auth(request: Request):
+    """Optional authentication - only enforce if token is configured."""
+    correct_token = os.environ.get("MCP_BEARER_TOKEN")
+    
+    # If no token is configured, allow access without authentication
+    if not correct_token:
+        return None
+    
+    # Extract token from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Authorization header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication scheme",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    token = auth_header[7:]  # Remove "Bearer " prefix
+    if token != correct_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return token
+
+
 @app.post("/mcp")
 @app.post("/mcp/")
-async def mcp_endpoint(request: Request, token: Optional[str] = Depends(get_current_token)):
+async def mcp_endpoint(request: Request, auth_result = Depends(optional_auth)):
     """MCP endpoint - proxy to FastMCP's actual tools."""
     try:
         body = await request.json()
@@ -414,7 +463,17 @@ def run_server() -> None:
     Serves as the entrypoint for the 'analytics-mcp' command.
     """
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    host = os.environ.get("HOST", "0.0.0.0")
+    
+    logger.info(f"=== Google Analytics MCP Server Starting ===")
+    logger.info(f"Host: {host}")
+    logger.info(f"Port: {port}")
+    logger.info(f"Environment: {'Render' if os.environ.get('RENDER') else 'Local'}")
+    logger.info(f"Bearer Token Configured: {'Yes' if os.environ.get('MCP_BEARER_TOKEN') else 'No (authentication disabled)'}")
+    logger.info(f"Google Analytics Credentials: {'Configured' if os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') else 'Not configured'}")
+    logger.info(f"===========================================")
+    
+    uvicorn.run(app, host=host, port=port)
 
 
 if __name__ == "__main__":

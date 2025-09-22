@@ -66,3 +66,6 @@ system_tests/local_test_setup
 pylintrc
 pylintrc.test
 
+# Deployment documentation
+DEPLOYMENT.md
+
