@@ -470,7 +470,7 @@ def run_server() -> None:
     logger.info(f"Port: {port}")
     logger.info(f"Environment: {'Render' if os.environ.get('RENDER') else 'Local'}")
     logger.info(f"Bearer Token Configured: {'Yes' if os.environ.get('MCP_BEARER_TOKEN') else 'No (authentication disabled)'}")
-    logger.info(f"Google Analytics Credentials: {'Configured' if os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') else 'Not configured'}")
+    logger.info(f"Google Analytics Credentials: {'Configured' if os.environ.get('GOOGLE_APPLICATION_CREDENTIALS_BASE64') else 'Not configured'}")
     logger.info(f"===========================================")
     
     uvicorn.run(app, host=host, port=port)

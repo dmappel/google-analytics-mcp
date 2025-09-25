@@ -1,0 +1,48 @@
+services:
+  analytics-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: analytics-mcp-server
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - MCP_BEARER_TOKEN=${MCP_BEARER_TOKEN}
+      - GOOGLE_APPLICATION_CREDENTIALS_BASE64=${GOOGLE_APPLICATION_CREDENTIALS_BASE64}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-}
+      - LOGGING_LEVEL=${LOGGING_LEVEL:-INFO}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - analytics-mcp-network
+
+  # Optional: Add a reverse proxy for production deployments
+  nginx:
+    image: nginx:alpine
+    container_name: analytics-mcp-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl/certs:ro  # Optional: for SSL certificates
+    depends_on:
+      - analytics-mcp
+    restart: unless-stopped
+    networks:
+      - analytics-mcp-network
+    profiles:
+      - production  # Only start with --profile production
+
+networks:
+  analytics-mcp-network:
+    driver: bridge

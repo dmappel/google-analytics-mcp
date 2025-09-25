@@ -13,7 +13,24 @@
 
 ## Quick Start
 
-### 1. Install
+### Option 1: Docker (Recommended)
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/googleanalytics/google-analytics-mcp.git
+cd google-analytics-mcp
+
+# 2. Configure environment variables (see step 2 below)
+# Create .env file with required variables
+
+# 3. Start with Docker Compose
+docker-compose up -d
+
+# Server will be available at http://localhost:8000
+```
+
+### Option 2: Local Python Install
+
 ```bash
 git clone https://github.com/googleanalytics/google-analytics-mcp.git
 cd google-analytics-mcp
@@ -40,6 +57,20 @@ echo "GOOGLE_APPLICATION_CREDENTIALS_BASE64=<paste-base64-output>" >> .env
 - [Google Analytics Data API](https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com)
 
 ### 4. Run Server
+
+#### Docker (Recommended)
+```bash
+# Development
+docker-compose up
+
+# Production with reverse proxy
+docker-compose --profile production up -d
+
+# View logs
+docker-compose logs -f analytics-mcp
+```
+
+#### Local Python
 ```bash
 analytics-mcp
 # Server starts at http://127.0.0.1:8000
@@ -68,7 +99,7 @@ curl -X POST http://127.0.0.1:8000/mcp \
 ## n8n Integration
 
 **Configure MCP Node:**
-- Server URL: `http://127.0.0.1:8000`
+- Server URL: `http://127.0.0.1:8000/mcp`
 - Transport: `HTTP Streamable`
 - Authentication: `Bearer Token`
 - Token: Your `MCP_BEARER_TOKEN` value
@@ -87,9 +118,10 @@ MCP_BEARER_TOKEN=your-secure-token-here
 GOOGLE_APPLICATION_CREDENTIALS_BASE64=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # Optional
-HOST=127.0.0.1
+HOST=0.0.0.0           # Use 0.0.0.0 for Docker
 PORT=8000
 GOOGLE_CLOUD_PROJECT=your-project-id
+LOGGING_LEVEL=INFO     # DEBUG for verbose logging
 ```
 
 ### Alternative: Development with ADC
@@ -131,6 +163,18 @@ gcloud auth application-default login \
 - **GA API errors**: Verify APIs enabled and service account has GA access
 
 ### Debug Mode
+
+#### Docker
+```bash
+# Set debug in .env file
+echo "LOGGING_LEVEL=DEBUG" >> .env
+docker-compose up
+
+# Or set inline
+LOGGING_LEVEL=DEBUG docker-compose up
+```
+
+#### Local Python
 ```bash
 export LOGGING_LEVEL=DEBUG
 analytics-mcp
@@ -138,15 +182,73 @@ analytics-mcp
 
 ## Architecture
 
+### Docker Deployment
+```
+┌─────────────┐    ┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ n8n/Claude  │◄──►│   Nginx     │◄──►│ FastAPI Container│◄──►│ Google Analytics│
+│             │    │ (optional)  │    │   Port 8000      │    │      APIs       │
+└─────────────┘    └─────────────┘    └──────────────────┘    └─────────────────┘
+     HTTP              Reverse              FastMCP                 REST APIs
+  Streamable             Proxy               Tools
+  JSON-RPC 2.0
+```
+
+### Local Development
 ```
 n8n/Claude ◄─── HTTP Streamable ───► FastAPI ◄─── FastMCP ───► Google Analytics APIs
            (JSON-RPC 2.0)           (Port 8000)    (Tools)
 ```
 
 Built with:
+- [Docker](https://www.docker.com/) - Containerization
 - [FastMCP](https://github.com/jlowin/fastmcp) - MCP framework
 - [FastAPI](https://fastapi.tiangolo.com/) - HTTP server
+- [Nginx](https://nginx.org/) - Reverse proxy (optional)
 - [Google Analytics APIs](https://developers.google.com/analytics) - Data source
+
+## Docker Commands
+
+### Development
+```bash
+# Start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f analytics-mcp
+
+# Stop services
+docker-compose down
+
+# Rebuild after code changes
+docker-compose up --build
+```
+
+### Production
+```bash
+# Start with Nginx reverse proxy
+docker-compose --profile production up -d
+
+# Scale the analytics service
+docker-compose up --scale analytics-mcp=3
+
+# Update and restart
+docker-compose pull && docker-compose up -d
+```
+
+### Troubleshooting
+```bash
+# Check service status
+docker-compose ps
+
+# Access container shell
+docker-compose exec analytics-mcp bash
+
+# View container logs
+docker logs analytics-mcp-server
+
+# Restart specific service
+docker-compose restart analytics-mcp
+```
 
 ## Links
 
